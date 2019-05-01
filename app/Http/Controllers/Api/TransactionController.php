@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use Validator;
@@ -24,15 +23,16 @@ class TransactionController extends Controller
      */
     public function index(Request $request)
     {
+        $date = \Carbon\Carbon::today()->subDays(7);
         $transactions = Transaction::with([
             'product' => function($query){
                 $query->select('qty', 'price', 'product_name', 
                     DB::raw('qty * price AS sub_total')
                 );
             }, 
-            'customer'
+            'customer:id,name,email,gender,phone'
             ])
-            ->select();
+            ->where('created_at', '>=', $date);
 
         if ($request->query()){
             foreach ($request->query() as $key => $value) {
@@ -54,6 +54,7 @@ class TransactionController extends Controller
                 }
             }
         }
+     
         $result = $transactions->get()->each(function ($tran, $key) {
             $tran->total = $tran->product->sum('sub_total');
         });  
@@ -90,31 +91,30 @@ class TransactionController extends Controller
         ];
         $transaction = Transaction::create($transaction);
 
-        $rows = $request->products;
-        foreach ($rows as $row => $key)
+        foreach ($request->products as $row => $key)
         {
             $transactionItems[] = [
                 'product_id' => $key['product_id'],
-                'qty' => $key['qty'],
-                'transaction_id' => $transaction->id,
-                
+                'qty' => $key['qty']
             ];
         }
 
-        TransactionItem::insert($transactionItems);
-        $lastTransaction = Transaction::with([
-                'transactionItem.product' => function($query){
-                    $query->select('id', 'product_name', 'price', 'stock');
-                },
-                'customer' => function($query){
-                    $query->select('id', 'name', 'email', 'gender', 'phone');
-                }
+
+        $transaction->product()->attach($transactionItems);
+        
+        $transactions = Transaction::with([
+            'product' => function($query){
+                $query->select('qty', 'price', 'product_name', 
+                    DB::raw('qty * price AS sub_total')
+                );
+            }, 
+            'customer:id,name,email,gender,phone'
             ])
-            ->orderBy('id', 'desc')
-            ->first();
+            ->orderBy('id', 'desc');
 
         return response()->json([
-            'result' => $lastTransaction,
+            'result' => $transactions->first(),
+            'total' => $transactions->first()->product->sum('sub_total'),
             'status_code' => 200,
         ], 200);
     }
@@ -127,15 +127,22 @@ class TransactionController extends Controller
      */
     public function show($id)
     {
-        $transaction = Transaction::with([
-                'product' => function($query){
-                    $query->select('id', 'product_name', 'price', 'stock');
-                },
-                'customer' => function($query){
-                    $query->select('id', 'name', 'email', 'gender', 'phone');
-                }
-            ])->findOrFail($id);  
-        return response()->json($transaction, 200);
+        $transaction = Transaction::findOrFail($id);
+        $transactions = Transaction::with([
+            'product' => function($query){
+                $query->select('qty', 'price', 'product_name', 
+                    DB::raw('qty * price AS sub_total')
+                );
+            }, 
+            'customer:id,name,email,gender,phone'
+            ])
+            ->where('id', $id);
+
+        return response()->json([
+                'result' => $transactions->first(),
+                'total' => $transactions->first()->product->sum('sub_total'),
+                'status_code' => 200,
+            ], 200);
     }
 
     /**
@@ -165,34 +172,30 @@ class TransactionController extends Controller
         ];
         $transaction->update($newTransaction);
         
-        $transactionItem = TransactionItem::where('transaction_id', $id)->delete();
-        
-        $rows = $request->products;
-        
-        foreach ($rows as $row => $key)
+        foreach ($request->products as $row => $key)
         {
             $transactionItems[] = [
                 'product_id' => $key['product_id'],
-                'qty' => $key['qty'],
-                'transaction_id' => $id
+                'qty' => $key['qty']
             ];
         }
 
-        TransactionItem::insert($transactionItems);
+
+        $transaction->product()->sync($transactionItems);
         
-        $lastTransaction = Transaction::with([
-                'transactionItem.product' => function($query){
-                    $query->select('id', 'product_name', 'price', 'stock');
-                },
-                'customer' => function($query){
-                    $query->select('id', 'name', 'email', 'gender', 'phone');
-                }
+        $transactions = Transaction::with([
+            'product' => function($query){
+                $query->select('qty', 'price', 'product_name', 
+                    DB::raw('qty * price AS sub_total')
+                );
+            }, 
+            'customer:id,name,email,gender,phone'
             ])
-            ->orderBy('id', 'desc')
-            ->first();
+            ->where('id', $id);
 
         return response()->json([
-            'result' => $lastTransaction,
+            'result' => $transactions->first(),
+            'total' => $transactions->first()->product->sum('sub_total'),
             'status_code' => 200,
         ], 200);
     }
@@ -206,20 +209,10 @@ class TransactionController extends Controller
     public function destroy($id)
     {
         $transaction = Transaction::findOrFail($id);
-        $lastTransaction = Transaction::with([
-            'transactionItem.product' => function($query){
-                $query->select('id', 'product_name', 'price', 'stock');
-            },
-            'customer' => function($query){
-                $query->select('id', 'name', 'email', 'gender', 'phone');
-            }
-        ])
-            ->where('transactions.id', $id)
-            ->first();
         $transaction->delete();
 
         return response()->json([
-            'result' => $lastTransaction,
+            'result' => 'success',                
             'status_code' => 200,
         ], 200);
     }
