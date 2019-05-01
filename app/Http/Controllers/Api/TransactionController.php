@@ -6,6 +6,7 @@ use Validator;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use App\Models\TransactionItem;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -23,25 +24,26 @@ class TransactionController extends Controller
      */
     public function index(Request $request)
     {
-        $transations = Transaction::with([
-            'transactionItem.product' => function($query){
-                $query->select('id', 'product_name', 'price', 'stock');
-            },
-            'customer' => function($query){
-                $query->select('id', 'name', 'email', 'gender', 'phone');
-            }
-        ]);
-  
+        $transactions = Transaction::with([
+            'product' => function($query){
+                $query->select('qty', 'price', 'product_name', 
+                    DB::raw('qty * price AS sub_total')
+                );
+            }, 
+            'customer'
+            ])
+            ->select();
+
         if ($request->query()){
             foreach ($request->query() as $key => $value) {
                 if (Schema::hasColumn('transactions', $key)){
-                    $transations = $transations->where('transactions.'.$key, 'like', "%{$value}%");
+                    $transactions = $transactions->where('transactions.'.$key, 'like', "%{$value}%");
                 }else if (Schema::hasColumn('products', $key)){
-                    $transations = $transations->whereHas('product', function ($query) use ($key, $value) {
+                    $transactions = $transactions->whereHas('product', function ($query) use ($key, $value) {
                         $query->where("products.{$key}", 'like', "%{$value}%");
                     });
                 }else if (Schema::hasColumn('customers', $key)){
-                    $transations = $transations->whereHas('customer', function ($query) use($key, $value) {
+                    $transactions = $transactions->whereHas('customer', function ($query) use($key, $value) {
                         $query->where("customers.{$key}", 'like', "%{$value}%");
                     });
                 }else {
@@ -52,10 +54,13 @@ class TransactionController extends Controller
                 }
             }
         }
-        $transactions = $transations->get(); 
-       
+        $result = $transactions->get()->each(function ($tran, $key) {
+            $tran->total = $tran->product->sum('sub_total');
+        });  
+        
+              
         return response()->json([
-            'result' => $transactions,
+            'result' => $result,
             'status_code' => 200,
         ]);
     }
@@ -86,7 +91,6 @@ class TransactionController extends Controller
         $transaction = Transaction::create($transaction);
 
         $rows = $request->products;
-        
         foreach ($rows as $row => $key)
         {
             $transactionItems[] = [

@@ -12,7 +12,7 @@ class Product extends Model
 
     public function transaction()
     {
-        return $this->hasMany('App\Models\Transaction');
+        return $this->belongsToMany('App\Models\Transaction', 'transaction_items', 'product_id', 'transaction_id');
     }
 
     public function transactionItem()

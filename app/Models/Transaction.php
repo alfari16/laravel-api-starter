@@ -15,9 +15,14 @@ class Transaction extends Model
         return $this->belongsTo('App\Models\Customer');
     }
 
-    public function transactionItem()
+    public function product()
     {
-        return $this->hasMany('App\Models\TransactionItem');
+        return $this->belongsToMany(
+            'App\Models\Product', 
+            'transaction_items', 
+            'transaction_id', 
+            'product_id')
+            ->withPivot('qty');
     }
     
     public function getCreatedAtAttribute($value)
