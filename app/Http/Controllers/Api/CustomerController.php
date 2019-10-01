@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use Validator;
-use App\Models\Customer;
+use App\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
@@ -23,9 +23,9 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         $customers = DB::table('customers');
-        if ($request->query()){
+        if ($request->query()) {
             foreach ($request->query() as $key => $value) {
-                if (Schema::hasColumn('customers', $key)){
+                if (Schema::hasColumn('customers', $key)) {
                     $customers = $customers->where($key, 'like', "%{$value}%");
                 }
             }
@@ -44,14 +44,14 @@ class CustomerController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(),[ 
+        $validator = Validator::make($request->all(), [
             'name' => 'required',
             'email' => 'required|unique:customers',
             'gender' => 'required',
             'phone' => 'required'
         ]);
 
-        if ($validator->fails()){
+        if ($validator->fails()) {
             return response()->json([
                 'message' =>  $validator->errors(),
                 'status_code' => 400
@@ -80,7 +80,7 @@ class CustomerController extends Controller
      */
     public function show($id)
     {
-        $customer = Customer::findOrFail($id);  
+        $customer = Customer::findOrFail($id);
         return response()->json($customer, 200);
     }
 
@@ -94,14 +94,14 @@ class CustomerController extends Controller
     public function update(Request $request, $id)
     {
         $customer = Customer::findOrFail($id);
-        $validator = Validator::make($request->all(),[ 
+        $validator = Validator::make($request->all(), [
             'name' => 'required',
             'email' => 'required|unique:customers',
             'gender' => 'required',
             'phone' => 'required'
         ]);
 
-        if ($validator->fails()){
+        if ($validator->fails()) {
             return response()->json([
                 'message' =>  $validator->errors(),
                 'status_code' => 400

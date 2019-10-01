@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use Validator;
-use App\Models\Product;
+use App\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
@@ -23,9 +23,9 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $products = DB::table('products');
-        if ($request->query()){
+        if ($request->query()) {
             foreach ($request->query() as $key => $value) {
-                if (Schema::hasColumn('products', $key)){
+                if (Schema::hasColumn('products', $key)) {
                     $products = $products->where($key, 'like', "%{$value}%");
                 }
             }
@@ -44,13 +44,13 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(),[ 
+        $validator = Validator::make($request->all(), [
             'product_name' => 'required',
             'price' => 'required|integer',
             'stock' => 'required|integer'
         ]);
 
-        if ($validator->fails()){
+        if ($validator->fails()) {
             return response()->json([
                 'message' =>  $validator->errors(),
                 'status_code' => 400
@@ -78,7 +78,7 @@ class ProductController extends Controller
      */
     public function show($id)
     {
-        $product = Product::findOrFail($id);  
+        $product = Product::findOrFail($id);
         return response()->json($product, 200);
     }
 
@@ -92,13 +92,13 @@ class ProductController extends Controller
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
-        $validator = Validator::make($request->all(),[ 
+        $validator = Validator::make($request->all(), [
             'product_name' => 'required',
             'price' => 'required|integer',
             'stock' => 'required|integer'
         ]);
 
-        if ($validator->fails()){
+        if ($validator->fails()) {
             return response()->json([
                 'message' =>  $validator->errors(),
                 'status_code' => 400
@@ -111,7 +111,7 @@ class ProductController extends Controller
             'stock' => $request->stock,
         ];
         $product->update($newProduct);
-       
+
         return response()->json([
             'result' => $newProduct,
             'status_code' => 200,

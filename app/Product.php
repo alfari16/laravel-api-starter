@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
@@ -12,11 +12,11 @@ class Product extends Model
 
     public function transaction()
     {
-        return $this->belongsToMany('App\Models\Transaction', 'transaction_items', 'product_id', 'transaction_id');
+        return $this->belongsToMany('App\Transaction', 'transaction_items', 'product_id', 'transaction_id');
     }
 
     public function transactionItem()
     {
-        return $this->hasMany('App\Models\TransactionItem');
+        return $this->hasMany('App\TransactionItem');
     }
 }

@@ -1,8 +1,8 @@
 <?php
 
-use App\Models\Product;
-use App\Models\Customer;
-use App\Models\Transaction;
+use App\Product;
+use App\Customer;
+use App\Transaction;
 use Illuminate\Database\Seeder;
 
 class TransactionsTableSeeder extends Seeder

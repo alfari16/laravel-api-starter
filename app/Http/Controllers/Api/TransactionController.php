@@ -1,10 +1,11 @@
 <?php
+
 namespace App\Http\Controllers\Api;
 
 use Validator;
-use App\Models\Transaction;
+use App\Transaction;
 use Illuminate\Http\Request;
-use App\Models\TransactionItem;
+use App\TransactionItem;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Schema;
@@ -25,28 +26,31 @@ class TransactionController extends Controller
     {
         $date = \Carbon\Carbon::today()->subDays(7);
         $transactions = Transaction::with([
-            'product' => function($query){
-                $query->select('qty', 'price', 'product_name', 
+            'product' => function ($query) {
+                $query->select(
+                    'qty',
+                    'price',
+                    'product_name',
                     DB::raw('qty * price AS sub_total')
                 );
-            }, 
+            },
             'customer:id,name,email,gender,phone'
-            ])
+        ])
             ->where('created_at', '>=', $date);
 
-        if ($request->query()){
+        if ($request->query()) {
             foreach ($request->query() as $key => $value) {
-                if (Schema::hasColumn('transactions', $key)){
-                    $transactions = $transactions->where('transactions.'.$key, 'like', "%{$value}%");
-                }else if (Schema::hasColumn('products', $key)){
+                if (Schema::hasColumn('transactions', $key)) {
+                    $transactions = $transactions->where('transactions.' . $key, 'like', "%{$value}%");
+                } else if (Schema::hasColumn('products', $key)) {
                     $transactions = $transactions->whereHas('product', function ($query) use ($key, $value) {
                         $query->where("products.{$key}", 'like', "%{$value}%");
                     });
-                }else if (Schema::hasColumn('customers', $key)){
-                    $transactions = $transactions->whereHas('customer', function ($query) use($key, $value) {
+                } else if (Schema::hasColumn('customers', $key)) {
+                    $transactions = $transactions->whereHas('customer', function ($query) use ($key, $value) {
                         $query->where("customers.{$key}", 'like', "%{$value}%");
                     });
-                }else {
+                } else {
                     return response()->json([
                         'message' => 'Field not found',
                         'status_code' => 404
@@ -54,12 +58,12 @@ class TransactionController extends Controller
                 }
             }
         }
-     
+
         $result = $transactions->get()->each(function ($tran, $key) {
             $tran->total = $tran->product->sum('sub_total');
-        });  
-        
-              
+        });
+
+
         return response()->json([
             'result' => $result,
             'status_code' => 200,
@@ -74,12 +78,12 @@ class TransactionController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(),[ 
+        $validator = Validator::make($request->all(), [
             'customer_id' => 'required',
-            
+
         ]);
 
-        if ($validator->fails()){
+        if ($validator->fails()) {
             return response()->json([
                 'message' =>  $validator->errors(),
                 'status_code' => 400
@@ -91,8 +95,7 @@ class TransactionController extends Controller
         ];
         $transaction = Transaction::create($transaction);
 
-        foreach ($request->products as $row => $key)
-        {
+        foreach ($request->products as $row => $key) {
             $transactionItems[] = [
                 'product_id' => $key['product_id'],
                 'qty' => $key['qty']
@@ -101,15 +104,18 @@ class TransactionController extends Controller
 
 
         $transaction->product()->attach($transactionItems);
-        
+
         $transactions = Transaction::with([
-            'product' => function($query){
-                $query->select('qty', 'price', 'product_name', 
+            'product' => function ($query) {
+                $query->select(
+                    'qty',
+                    'price',
+                    'product_name',
                     DB::raw('qty * price AS sub_total')
                 );
-            }, 
+            },
             'customer:id,name,email,gender,phone'
-            ])
+        ])
             ->orderBy('id', 'desc');
 
         return response()->json([
@@ -129,20 +135,23 @@ class TransactionController extends Controller
     {
         $transaction = Transaction::findOrFail($id);
         $transactions = Transaction::with([
-            'product' => function($query){
-                $query->select('qty', 'price', 'product_name', 
+            'product' => function ($query) {
+                $query->select(
+                    'qty',
+                    'price',
+                    'product_name',
                     DB::raw('qty * price AS sub_total')
                 );
-            }, 
+            },
             'customer:id,name,email,gender,phone'
-            ])
+        ])
             ->where('id', $id);
 
         return response()->json([
-                'result' => $transactions->first(),
-                'total' => $transactions->first()->product->sum('sub_total'),
-                'status_code' => 200,
-            ], 200);
+            'result' => $transactions->first(),
+            'total' => $transactions->first()->product->sum('sub_total'),
+            'status_code' => 200,
+        ], 200);
     }
 
     /**
@@ -154,14 +163,14 @@ class TransactionController extends Controller
      */
     public function update(Request $request, $id)
     {
-        
+
         $transaction = Transaction::findOrFail($id);
-        $validator = Validator::make($request->all(),[ 
+        $validator = Validator::make($request->all(), [
             'customer_id' => 'required',
             'products' => 'required'
         ]);
 
-        if ($validator->fails()){
+        if ($validator->fails()) {
             return response()->json([
                 'message' =>  $validator->errors(),
                 'status_code' => 400
@@ -171,9 +180,8 @@ class TransactionController extends Controller
             'customer_id' => $request->customer_id,
         ];
         $transaction->update($newTransaction);
-        
-        foreach ($request->products as $row => $key)
-        {
+
+        foreach ($request->products as $row => $key) {
             $transactionItems[] = [
                 'product_id' => $key['product_id'],
                 'qty' => $key['qty']
@@ -182,15 +190,18 @@ class TransactionController extends Controller
 
 
         $transaction->product()->sync($transactionItems);
-        
+
         $transactions = Transaction::with([
-            'product' => function($query){
-                $query->select('qty', 'price', 'product_name', 
+            'product' => function ($query) {
+                $query->select(
+                    'qty',
+                    'price',
+                    'product_name',
                     DB::raw('qty * price AS sub_total')
                 );
-            }, 
+            },
             'customer:id,name,email,gender,phone'
-            ])
+        ])
             ->where('id', $id);
 
         return response()->json([
@@ -212,7 +223,7 @@ class TransactionController extends Controller
         $transaction->delete();
 
         return response()->json([
-            'result' => 'success',                
+            'result' => 'success',
             'status_code' => 200,
         ], 200);
     }
